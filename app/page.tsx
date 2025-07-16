@@ -6,6 +6,7 @@ import { PokemonModal } from "@/components/pokemon-modal"
 import { Navigation } from "@/components/navigation"
 import { FilterBar } from "@/components/filter-bar"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { TeamBuilder } from "@/components/team-builder"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -45,13 +46,20 @@ export default function Home() {
   useEffect(() => {
     if (currentCategory === "national") {
       fetchAllPokemon()
+    } else if (currentCategory === "team-builder") {
+      // Team builder doesn't need to fetch all Pokemon initially
+      setLoading(false)
+      setPokemonData([])
+      setDisplayedPokemon([])
     } else {
       fetchSpecialForms()
     }
   }, [currentCategory])
 
   useEffect(() => {
-    filterAndDisplayPokemon()
+    if (currentCategory !== "team-builder") {
+      filterAndDisplayPokemon()
+    }
   }, [pokemonData, currentGeneration, searchTerm, sortBy, typeFilter1, typeFilter2])
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -111,8 +119,9 @@ export default function Home() {
           const progress = ((batch + 1) / totalBatches) * 100
           setLoadingProgress(progress)
 
+          // Increased delay to mitigate potential rate limiting issues
           if (batch < totalBatches - 1) {
-            await delay(100)
+            await delay(200)
           }
         } catch (error) {
           console.error(`Error fetching batch ${batch + 1}:`, error)
@@ -532,70 +541,76 @@ export default function Home() {
           onGenerationChange={setCurrentGeneration}
         />
 
-        <FilterBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          typeFilter1={typeFilter1}
-          onTypeFilter1Change={setTypeFilter1}
-          typeFilter2={typeFilter2}
-          onTypeFilter2Change={setTypeFilter2}
-        />
-
-        {loading ? (
-          <Card className="p-6 sm:p-8 text-center">
-            <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm sm:text-base">
-              Loading {currentCategory === "national" ? "Pokémon" : `${currentCategory} forms`}...
-            </p>
-            <div className="w-full max-w-md mx-auto">
-              <Progress value={loadingProgress} className="h-2" />
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
-                {Math.round(loadingProgress)}% complete
-              </p>
-            </div>
-          </Card>
-        ) : error ? (
-          <Card className="p-6 sm:p-8 text-center">
-            <div className="text-4xl sm:text-6xl mb-4">⚠️</div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error Loading Pokémon</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm sm:text-base">{error}</p>
-            <Button onClick={retryLoading} className="px-4 sm:px-6 py-2">
-              Try Again
-            </Button>
-          </Card>
+        {currentCategory === "team-builder" ? (
+          <TeamBuilder />
         ) : (
           <>
-            <PokemonGrid
-              pokemon={displayedPokemon}
-              onPokemonSelect={setSelectedPokemon}
-              selectedPokemon={selectedPokemon}
+            <FilterBar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              typeFilter1={typeFilter1}
+              onTypeFilter1Change={setTypeFilter1}
+              typeFilter2={typeFilter2}
+              onTypeFilter2Change={setTypeFilter2}
             />
 
-            {hasMore && (
-              <div className="text-center mt-6 sm:mt-8">
-                <Button onClick={loadMore} disabled={loadingMore} className="px-6 sm:px-8 py-2">
-                  {loadingMore ? (
-                    <>
-                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                      Loading...
-                    </>
-                  ) : (
-                    "Load More Pokémon"
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {displayedPokemon.length === 0 && !loading && !error && (
+            {loading ? (
               <Card className="p-6 sm:p-8 text-center">
-                <div className="text-4xl sm:text-6xl mb-4">🔍</div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Pokémon Found</h3>
-                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
-                  Try adjusting your search terms or filters
+                <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm sm:text-base">
+                  Loading {currentCategory === "national" ? "Pokémon" : `${currentCategory} forms`}...
                 </p>
+                <div className="w-full max-w-md mx-auto">
+                  <Progress value={loadingProgress} className="h-2" />
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    {Math.round(loadingProgress)}% complete
+                  </p>
+                </div>
               </Card>
+            ) : error ? (
+              <Card className="p-6 sm:p-8 text-center">
+                <div className="text-4xl sm:text-6xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error Loading Pokémon</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm sm:text-base">{error}</p>
+                <Button onClick={retryLoading} className="px-4 sm:px-6 py-2">
+                  Try Again
+                </Button>
+              </Card>
+            ) : (
+              <>
+                <PokemonGrid
+                  pokemon={displayedPokemon}
+                  onPokemonSelect={setSelectedPokemon}
+                  selectedPokemon={selectedPokemon}
+                />
+
+                {hasMore && (
+                  <div className="text-center mt-6 sm:mt-8">
+                    <Button onClick={loadMore} disabled={loadingMore} className="px-6 sm:px-8 py-2">
+                      {loadingMore ? (
+                        <>
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                          Loading...
+                        </>
+                      ) : (
+                        "Load More Pokémon"
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {displayedPokemon.length === 0 && !loading && !error && (
+                  <Card className="p-6 sm:p-8 text-center">
+                    <div className="text-4xl sm:text-6xl mb-4">🔍</div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Pokémon Found</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">
+                      Try adjusting your search terms or filters
+                    </p>
+                  </Card>
+                )}
+              </>
             )}
           </>
         )}
