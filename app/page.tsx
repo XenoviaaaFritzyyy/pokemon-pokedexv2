@@ -263,6 +263,9 @@ export default function Home() {
   const fetchMegaEvolutions = async (): Promise<any[]> => {
     const megaEvolutions: any[] = []
     const megaVariants = [
+      "kyogre-primal",
+      "groudon-primal",
+      // Original Mega Evolutions (Gen 6 - all verified to exist in PokeAPI)
       "venusaur-mega",
       "charizard-mega-x",
       "charizard-mega-y",
@@ -329,7 +332,7 @@ export default function Home() {
           }
         }
       } catch (error) {
-        console.error(`Error fetching ${variant}:`, error)
+        // console.error removed to avoid cluttering console
       }
     }
 

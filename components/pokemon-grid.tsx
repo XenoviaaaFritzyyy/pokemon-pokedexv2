@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
+import { ImagePlaceholder } from "@/components/image-placeholder"
 
 interface PokemonGridProps {
   pokemon: any[]
@@ -14,6 +15,7 @@ interface PokemonGridProps {
 export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
   const [hoveredPokemon, setHoveredPokemon] = useState<number | null>(null)
   const [spriteMode, setSpriteMode] = useState<{ [key: number]: boolean }>({})
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({})
 
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
@@ -40,11 +42,9 @@ export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
   }
 
   const getCorrectSprite = (poke: any, isHovered: boolean, isSprite: boolean) => {
-    // For regional forms, mega evolutions, and other variants, use the correct sprite
     const name = poke.name.toLowerCase()
 
     if (isSprite) {
-      // For sprite mode, use animated sprite on hover
       if (isHovered) {
         return (
           poke.sprites.versions?.["generation-v"]?.["black-white"]?.animated?.front_default ||
@@ -54,7 +54,6 @@ export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
       }
       return poke.sprites.front_default || "/placeholder.svg?height=80&width=80"
     } else {
-      // For 3D mode, prioritize official artwork, but fall back to regular sprite
       return (
         poke.sprites.other["official-artwork"]?.front_default ||
         poke.sprites.front_default ||
@@ -64,7 +63,6 @@ export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
   }
 
   const getDisplayName = (name: string) => {
-    // Format names for better display
     return name
       .replace("-alola", " (Alolan)")
       .replace("-galar", " (Galarian)")
@@ -77,15 +75,21 @@ export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
       .replace("-", " ")
   }
 
+  const handleImageError = (pokeKey: string) => {
+    setImageErrors((prev) => ({ ...prev, [pokeKey]: true }))
+  }
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {pokemon.map((poke) => {
         const isHovered = hoveredPokemon === poke.id
         const isSprite = spriteMode[poke.id] || false
+        const pokeKey = `${poke.id}-${poke.name}`
+        const hasImageError = imageErrors[pokeKey]
 
         return (
           <Card
-            key={`${poke.id}-${poke.name}`}
+            key={pokeKey}
             className="cursor-pointer transition-all duration-200 hover:shadow-lg"
             onClick={() => onPokemonSelect(poke)}
             onMouseEnter={() => setHoveredPokemon(poke.id)}
@@ -95,14 +99,19 @@ export function PokemonGrid({ pokemon, onPokemonSelect }: PokemonGridProps) {
             <CardContent className="p-4">
               <div className="text-center">
                 <div className="relative w-20 h-20 mx-auto mb-3">
-                  <Image
-                    src={getCorrectSprite(poke, isHovered, isSprite) || "/placeholder.svg"}
-                    alt={poke.name}
-                    fill
-                    className={`object-contain transition-transform duration-200 ${
-                      isHovered && !isSprite ? "scale-110" : ""
-                    }`}
-                  />
+                  {hasImageError || !getCorrectSprite(poke, isHovered, isSprite) ? (
+                    <ImagePlaceholder className="w-full h-full" text="Not available" />
+                  ) : (
+                    <Image
+                      src={getCorrectSprite(poke, isHovered, isSprite) || "/placeholder.svg"}
+                      alt={poke.name}
+                      fill
+                      className={`object-contain transition-transform duration-200 ${
+                        isHovered && !isSprite ? "scale-110" : ""
+                      }`}
+                      onError={() => handleImageError(pokeKey)}
+                    />
+                  )}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   #{poke.id.toString().padStart(3, "0")}

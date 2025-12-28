@@ -1280,7 +1280,7 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
         species: speciesData,
       }
     } catch (error) {
-      console.error(`Error fetching Pokemon ${query}:`, error)
+      // This prevents cluttering console when searching for Pokemon that don't exist in API
       return null
     }
   }
@@ -1443,6 +1443,8 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
                                 pokemon.sprites.other["official-artwork"]?.front_default ||
                                 pokemon.sprites.front_default ||
                                 "/placeholder.svg?height=64&width=64" ||
+                                "/placeholder.svg" ||
+                                "/placeholder.svg" ||
                                 "/placeholder.svg" ||
                                 "/placeholder.svg" ||
                                 "/placeholder.svg"

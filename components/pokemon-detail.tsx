@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import Image from "next/image"
 import { Sparkles, Eye } from "lucide-react"
+import { ImagePlaceholder } from "@/components/image-placeholder"
 
 interface PokemonDetailProps {
   pokemon: any
@@ -18,11 +19,13 @@ export function PokemonDetail({ pokemon }: PokemonDetailProps) {
   const [show3D, setShow3D] = useState(true)
   const [moves, setMoves] = useState<any[]>([])
   const [typeEffectiveness, setTypeEffectiveness] = useState<any>({})
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     if (pokemon) {
       fetchMoves()
       fetchTypeEffectiveness()
+      setImageError(false)
     }
   }, [pokemon])
 
@@ -126,7 +129,17 @@ export function PokemonDetail({ pokemon }: PokemonDetailProps) {
         </div>
 
         <div className="relative w-48 h-48 mx-auto mb-4">
-          <Image src={getSprite() || "/placeholder.svg"} alt={pokemon.name} fill className="object-contain" />
+          {imageError || !getSprite() ? (
+            <ImagePlaceholder className="w-full h-full" />
+          ) : (
+            <Image
+              src={getSprite() || "/placeholder.svg"}
+              alt={pokemon.name}
+              fill
+              className="object-contain"
+              onError={() => setImageError(true)}
+            />
+          )}
         </div>
 
         <CardTitle className="text-2xl capitalize">{pokemon.name.replace("-", " ")}</CardTitle>

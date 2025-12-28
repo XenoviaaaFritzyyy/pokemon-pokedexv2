@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { TeamPokemon } from "@/components/team-builder"
-import { Plus, X, Edit2, Check, Sparkles } from "lucide-react"
-import Image from "next/image"
+import { Plus, X, Trash2, Search } from "lucide-react"
+import { ImagePlaceholder } from "@/components/image-placeholder"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 interface TeamSlotProps {
   slotIndex: number
@@ -52,21 +54,21 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
   const [availableItems, setAvailableItems] = useState<any[]>([])
   const [loadingMoves, setLoadingMoves] = useState(false)
   const [loadingItems, setLoadingItems] = useState(false)
-  const [editingNickname, setEditingNickname] = useState(false)
-  const [nicknameInput, setNicknameInput] = useState("")
-  const [/*moveSearchOpen*/ /*setMoveSearchOpen*/ ,] = useState(false)
-  const [/*moveSearchValue*/ /*setMoveSearchValue*/ ,] = useState("")
-  const [/*itemSearchOpen*/ /*setItemSearchOpen*/ ,] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const [moveSearchOpen, setMoveSearchOpen] = useState(false)
+  const [itemSearchOpen, setItemSearchOpen] = useState(false)
+  const [moveSearchQuery, setMoveSearchQuery] = useState("")
+  const [itemSearchQuery, setItemSearchQuery] = useState("")
 
   useEffect(() => {
-    if (teamMember) {
-      fetchPokemonMoves()
+    if (teamMember?.pokemon) {
+      fetchMoves()
       fetchHeldItems()
-      setNicknameInput(teamMember.nickname || "")
+      setImageError(false)
     }
   }, [teamMember])
 
-  const fetchPokemonMoves = async () => {
+  const fetchMoves = async () => {
     if (!teamMember) return
 
     setLoadingMoves(true)
@@ -311,12 +313,6 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
     onUpdateMember({ moves: newMoves })
   }
 
-  const updateNickname = () => {
-    if (!teamMember) return
-    onUpdateMember({ nickname: nicknameInput })
-    setEditingNickname(false)
-  }
-
   const getDisplayName = (name: string) => {
     return name
       .replace("-alola", " (Alolan)")
@@ -332,19 +328,52 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
 
   const filteredMoves = availableMoves.filter((move) => !teamMember?.moves.some((m) => m.name === move.name))
 
+  const categorizedMoves = {
+    "level-up": filteredMoves.filter(
+      (m) =>
+        m.learnMethod === "level-up" &&
+        (moveSearchQuery === "" || m.name.toLowerCase().includes(moveSearchQuery.toLowerCase())),
+    ),
+    machine: filteredMoves.filter(
+      (m) =>
+        m.learnMethod === "machine" &&
+        (moveSearchQuery === "" || m.name.toLowerCase().includes(moveSearchQuery.toLowerCase())),
+    ),
+    egg: filteredMoves.filter(
+      (m) =>
+        m.learnMethod === "egg" &&
+        (moveSearchQuery === "" || m.name.toLowerCase().includes(moveSearchQuery.toLowerCase())),
+    ),
+    tutor: filteredMoves.filter(
+      (m) =>
+        m.learnMethod === "tutor" &&
+        (moveSearchQuery === "" || m.name.toLowerCase().includes(moveSearchQuery.toLowerCase())),
+    ),
+    other: filteredMoves.filter(
+      (m) =>
+        !["level-up", "machine", "egg", "tutor"].includes(m.learnMethod) &&
+        (moveSearchQuery === "" || m.name.toLowerCase().includes(moveSearchQuery.toLowerCase())),
+    ),
+  }
+
+  const filteredItems = availableItems.filter(
+    (item) => itemSearchQuery === "" || item.name.toLowerCase().includes(itemSearchQuery.toLowerCase()),
+  )
+
   if (!teamMember) {
     return (
-      <Card className="group relative overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500 transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-        <CardContent className="flex items-center justify-center h-64 p-6">
+      <Card className="border-2 border-dashed border-gray-300 hover:border-purple-400 transition-all duration-300 bg-gray-50/50 dark:bg-gray-800/50 min-h-[200px] flex items-center justify-center group cursor-pointer">
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
           <Button
-            variant="ghost"
             onClick={onAddPokemon}
-            className="flex flex-col items-center space-y-3 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 transition-all duration-300 hover:scale-110 p-8 rounded-2xl"
+            variant="ghost"
+            className="flex flex-col items-center space-y-3 h-auto py-6 px-8 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-300 group-hover:scale-105"
           >
-            <div className="p-4 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 rounded-full group-hover:from-purple-200 group-hover:to-pink-200 dark:group-hover:from-purple-800 dark:group-hover:to-pink-800 transition-all duration-300">
-              <Plus className="w-8 h-8" />
+            <div className="p-4 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full group-hover:shadow-lg transition-shadow">
+              <Plus className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             </div>
-            <span className="font-medium">Add Pokémon</span>
+            <span className="text-lg font-semibold text-gray-700 dark:text-white">Add Pokémon</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Slot {slotIndex + 1}</span>
           </Button>
         </CardContent>
       </Card>
@@ -352,205 +381,351 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
   }
 
   return (
-    <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onRemovePokemon}
-        className="absolute top-3 right-3 z-10 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all duration-200 hover:scale-110"
-      >
-        <X className="w-4 h-4" />
-      </Button>
-
+    <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden group">
       <CardContent className="p-6 space-y-6">
         {/* Pokemon Header */}
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 p-2 shadow-inner">
-              <Image
-                src={
-                  teamMember.pokemon.sprites.other["official-artwork"]?.front_default ||
-                  teamMember.pokemon.sprites.front_default ||
-                  "/placeholder.svg?height=80&width=80" ||
-                  "/placeholder.svg" ||
-                  "/placeholder.svg" ||
-                  "/placeholder.svg"
-                }
-                alt={teamMember.pokemon.name}
-                width={80}
-                height={80}
-                className="object-contain w-full h-full"
-              />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-              <Sparkles className="w-3 h-3 text-white" />
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-2">
-              {editingNickname ? (
-                <div className="flex items-center space-x-2 w-full">
-                  <Input
-                    value={nicknameInput}
-                    onChange={(e) => setNicknameInput(e.target.value)}
-                    className="h-8 text-sm rounded-lg border-purple-200 focus:border-purple-400"
-                    placeholder="Enter nickname..."
-                  />
-                  <Button size="icon" variant="ghost" onClick={updateNickname} className="h-8 w-8 hover:bg-green-100">
-                    <Check className="w-4 h-4 text-green-600" />
-                  </Button>
-                </div>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative w-20 h-20 group-hover:scale-110 transition-transform duration-300">
+              {imageError ? (
+                <ImagePlaceholder name={teamMember.pokemon.name} />
               ) : (
-                <div className="flex items-center space-x-2 w-full">
-                  <h3 className="font-bold text-lg capitalize truncate bg-gradient-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
-                    {teamMember.nickname || getDisplayName(teamMember.pokemon.name)}
-                  </h3>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setEditingNickname(true)}
-                    className="h-6 w-6 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                  >
-                    <Edit2 className="w-3 h-3 text-blue-600" />
-                  </Button>
-                </div>
+                <img
+                  src={
+                    teamMember.pokemon.sprites?.other?.["official-artwork"]?.front_default ||
+                    teamMember.pokemon.sprites?.front_default ||
+                    "/placeholder.svg?height=80&width=80" ||
+                    "/placeholder.svg" ||
+                    "/placeholder.svg"
+                  }
+                  alt={teamMember.pokemon.name}
+                  className="w-full h-full object-contain drop-shadow-lg"
+                  onError={() => setImageError(true)}
+                />
               )}
             </div>
-
-            <div className="flex flex-wrap gap-1">
-              {teamMember.pokemon.types.map((type: any) => (
-                <Badge
-                  key={type.type.name}
-                  className={`${getTypeColor(type.type.name)} text-white text-xs px-2 py-1 rounded-full shadow-sm`}
-                >
-                  {type.type.name}
-                </Badge>
-              ))}
+            <div className="space-y-1">
+              <h3 className="text-xl font-bold capitalize text-gray-800 dark:text-white">{teamMember.pokemon.name}</h3>
+              <div className="flex flex-wrap gap-2">
+                {teamMember.pokemon.types?.map((type: any) => (
+                  <Badge key={type.type.name} className={`${getTypeColor(type.type.name)} text-white text-xs`}>
+                    {type.type.name}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRemovePokemon}
+            className="hover:bg-red-100 dark:hover:bg-red-900/20 rounded-full transition-colors"
+          >
+            <Trash2 className="w-5 h-5 text-red-500" />
+          </Button>
         </div>
 
-        {/* Configuration Section */}
-        <div className="space-y-4">
-          {/* Moves Section */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300 flex items-center space-x-2">
-              <span>Moves ({teamMember.moves.length}/4)</span>
+        {/* Nickname */}
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Nickname</h4>
+          <Input
+            type="text"
+            placeholder={`Enter nickname for ${teamMember.pokemon.name}`}
+            value={teamMember.nickname || ""}
+            onChange={(e) => onUpdateMember({ nickname: e.target.value })}
+            className="h-10 rounded-lg"
+          />
+        </div>
+
+        {/* Moves Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+              Moves ({teamMember.moves.length}/4)
             </h4>
-
-            <div className="space-y-2">
-              {teamMember.moves.map((move, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-3 hover:shadow-md transition-all duration-200"
-                >
-                  <div className="flex items-center space-x-3">
-                    <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shadow-sm`}>
-                      {move.type.name}
-                    </Badge>
-                    <span className="text-sm font-medium capitalize">{move.name.replace("-", " ")}</span>
-                    {move.power && (
-                      <span className="text-xs text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">
-                        {move.power} PWR
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => removeMove(index)}
-                    className="h-6 w-6 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-
-            {teamMember.moves.length < 4 && (
-              <Select
-                onValueChange={(value) => {
-                  const move = availableMoves.find((m) => m.name === value)
-                  if (move) addMove(move)
-                }}
-              >
-                <SelectTrigger className="w-full h-10 rounded-lg border-dashed border-purple-300 hover:border-purple-400 transition-colors">
-                  <SelectValue placeholder="Add move..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <ScrollArea className="h-64">
-                    {filteredMoves.map((move) => (
-                      <SelectItem key={move.name} value={move.name}>
-                        <div className="flex items-center space-x-3">
-                          <Badge className={`${getTypeColor(move.type.name)} text-white text-xs`}>
-                            {move.type.name}
-                          </Badge>
-                          <span className="capitalize">{move.name.replace("-", " ")}</span>
-                          {move.power && <span className="text-xs text-gray-500">{move.power} PWR</span>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-            )}
           </div>
 
-          {/* Nature and Item Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Nature */}
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Nature</h4>
-              <Select value={teamMember.nature || "hardy"} onValueChange={(value) => onUpdateMember({ nature: value })}>
-                <SelectTrigger className="h-10 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <ScrollArea className="h-48">
-                    {natures.map((nature) => (
-                      <SelectItem key={nature} value={nature}>
-                        <span className="capitalize">{nature}</span>
-                      </SelectItem>
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Held Item */}
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Held Item</h4>
-              <Select
-                value={teamMember.heldItem?.name || "none"}
-                onValueChange={(value) => {
-                  if (value === "none") {
-                    onUpdateMember({ heldItem: null })
-                  } else {
-                    const item = availableItems.find((i) => i.name === value)
-                    if (item) onUpdateMember({ heldItem: item })
-                  }
-                }}
+          <div className="space-y-2">
+            {teamMember.moves.map((move: any, index: number) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800"
               >
-                <SelectTrigger className="h-10 rounded-lg">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <ScrollArea className="h-64">
-                    <SelectItem value="none">
-                      <span className="text-gray-500">No item</span>
+                <div className="flex items-center space-x-3 flex-1">
+                  <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                    {move.type.name}
+                  </Badge>
+                  <span className="capitalize font-medium text-sm">{move.name.replace("-", " ")}</span>
+                  {move.power && <span className="text-xs text-gray-500">{move.power} PWR</span>}
+                  {move.accuracy && <span className="text-xs text-gray-500">{move.accuracy}% ACC</span>}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeMove(index)}
+                  className="h-8 w-8 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-full shrink-0"
+                >
+                  <X className="w-4 h-4 text-red-500" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {teamMember.moves.length < 4 && (
+            <Popover open={moveSearchOpen} onOpenChange={setMoveSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-10 rounded-lg border-dashed border-purple-300 hover:border-purple-400 transition-colors justify-start text-muted-foreground bg-transparent"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add move...
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Search moves..."
+                    value={moveSearchQuery}
+                    onValueChange={setMoveSearchQuery}
+                  />
+                  <CommandList className="max-h-[300px] overflow-y-auto">
+                    <CommandEmpty>No moves found.</CommandEmpty>
+
+                    {categorizedMoves["level-up"].length > 0 && (
+                      <CommandGroup heading="Level Up">
+                        {categorizedMoves["level-up"].map((move) => (
+                          <CommandItem
+                            key={move.name}
+                            value={move.name}
+                            onSelect={() => {
+                              addMove(move)
+                              setMoveSearchOpen(false)
+                              setMoveSearchQuery("")
+                            }}
+                            className="flex items-center justify-between px-2 py-2"
+                          >
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                                {move.type.name}
+                              </Badge>
+                              <span className="capitalize text-sm">{move.name.replace("-", " ")}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground shrink-0">
+                              {move.levelLearned > 0 && <span>Lv.{move.levelLearned}</span>}
+                              {move.power && <span>{move.power} PWR</span>}
+                              <Badge variant="outline" className="text-xs">
+                                {move.damage_class?.name || "status"}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+
+                    {categorizedMoves.machine.length > 0 && (
+                      <CommandGroup heading="TM/HM">
+                        {categorizedMoves.machine.map((move) => (
+                          <CommandItem
+                            key={move.name}
+                            value={move.name}
+                            onSelect={() => {
+                              addMove(move)
+                              setMoveSearchOpen(false)
+                              setMoveSearchQuery("")
+                            }}
+                            className="flex items-center justify-between px-2 py-2"
+                          >
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                                {move.type.name}
+                              </Badge>
+                              <span className="capitalize text-sm">{move.name.replace("-", " ")}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground shrink-0">
+                              {move.power && <span>{move.power} PWR</span>}
+                              <Badge variant="outline" className="text-xs">
+                                {move.damage_class?.name || "status"}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+
+                    {categorizedMoves.egg.length > 0 && (
+                      <CommandGroup heading="Egg Moves">
+                        {categorizedMoves.egg.map((move) => (
+                          <CommandItem
+                            key={move.name}
+                            value={move.name}
+                            onSelect={() => {
+                              addMove(move)
+                              setMoveSearchOpen(false)
+                              setMoveSearchQuery("")
+                            }}
+                            className="flex items-center justify-between px-2 py-2"
+                          >
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                                {move.type.name}
+                              </Badge>
+                              <span className="capitalize text-sm">{move.name.replace("-", " ")}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground shrink-0">
+                              {move.power && <span>{move.power} PWR</span>}
+                              <Badge variant="outline" className="text-xs">
+                                {move.damage_class?.name || "status"}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+
+                    {categorizedMoves.tutor.length > 0 && (
+                      <CommandGroup heading="Tutor Moves">
+                        {categorizedMoves.tutor.map((move) => (
+                          <CommandItem
+                            key={move.name}
+                            value={move.name}
+                            onSelect={() => {
+                              addMove(move)
+                              setMoveSearchOpen(false)
+                              setMoveSearchQuery("")
+                            }}
+                            className="flex items-center justify-between px-2 py-2"
+                          >
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                                {move.type.name}
+                              </Badge>
+                              <span className="capitalize text-sm">{move.name.replace("-", " ")}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground shrink-0">
+                              {move.power && <span>{move.power} PWR</span>}
+                              <Badge variant="outline" className="text-xs">
+                                {move.damage_class?.name || "status"}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+
+                    {categorizedMoves.other.length > 0 && (
+                      <CommandGroup heading="Other">
+                        {categorizedMoves.other.map((move) => (
+                          <CommandItem
+                            key={move.name}
+                            value={move.name}
+                            onSelect={() => {
+                              addMove(move)
+                              setMoveSearchOpen(false)
+                              setMoveSearchQuery("")
+                            }}
+                            className="flex items-center justify-between px-2 py-2"
+                          >
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Badge className={`${getTypeColor(move.type.name)} text-white text-xs shrink-0`}>
+                                {move.type.name}
+                              </Badge>
+                              <span className="capitalize text-sm">{move.name.replace("-", " ")}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-muted-foreground shrink-0">
+                              {move.power && <span>{move.power} PWR</span>}
+                              <Badge variant="outline" className="text-xs">
+                                {move.damage_class?.name || "status"}
+                              </Badge>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+
+        {/* Nature and Item Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Nature */}
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Nature</h4>
+            <Select value={teamMember.nature || "hardy"} onValueChange={(value) => onUpdateMember({ nature: value })}>
+              <SelectTrigger className="h-10 rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <ScrollArea className="h-48">
+                  {natures.map((nature) => (
+                    <SelectItem key={nature} value={nature}>
+                      <span className="capitalize">{nature}</span>
                     </SelectItem>
-                    {availableItems.map((item) => (
-                      <SelectItem key={item.name} value={item.name}>
-                        <span className="capitalize">{item.name.replace("-", " ")}</span>
-                      </SelectItem>
-                    ))}
-                  </ScrollArea>
-                </SelectContent>
-              </Select>
-            </div>
+                  ))}
+                </ScrollArea>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Held Item</h4>
+            <Popover open={itemSearchOpen} onOpenChange={setItemSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-10 rounded-lg justify-between text-left font-normal bg-transparent"
+                  role="combobox"
+                  aria-expanded={itemSearchOpen}
+                >
+                  <span className="capitalize truncate">
+                    {teamMember.heldItem ? teamMember.heldItem.name.replace("-", " ") : "No item"}
+                  </span>
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Search items..."
+                    value={itemSearchQuery}
+                    onValueChange={setItemSearchQuery}
+                  />
+                  <CommandList>
+                    <CommandEmpty>No items found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="none"
+                        onSelect={() => {
+                          onUpdateMember({ heldItem: null })
+                          setItemSearchOpen(false)
+                          setItemSearchQuery("")
+                        }}
+                      >
+                        <span className="text-gray-500 italic">No item</span>
+                      </CommandItem>
+                      <ScrollArea className="h-[300px]">
+                        {filteredItems.map((item) => (
+                          <CommandItem
+                            key={item.name}
+                            value={item.name}
+                            onSelect={() => {
+                              onUpdateMember({ heldItem: item })
+                              setItemSearchOpen(false)
+                              setItemSearchQuery("")
+                            }}
+                          >
+                            <span className="capitalize">{item.name.replace("-", " ")}</span>
+                          </CommandItem>
+                        ))}
+                      </ScrollArea>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </CardContent>
