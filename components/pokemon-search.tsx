@@ -14,14 +14,15 @@ import { GENERATION_RANGES, filterPokemonByGeneration } from "@/lib/utils"
 interface PokemonSearchProps {
   onSelectPokemon: (pokemon: any) => void
   onClose: () => void
+  initialGeneration?: string
 }
 
-export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) {
+export function PokemonSearch({ onSelectPokemon, onClose, initialGeneration = "all" }: PokemonSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [allPokemon, setAllPokemon] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchResults, setSearchResults] = useState<any[]>([])
-  const [selectedGeneration, setSelectedGeneration] = useState("all")
+  const [selectedGeneration, setSelectedGeneration] = useState(initialGeneration)
 
   // Comprehensive list of Pokemon names for better search coverage
   const pokemonDatabase = useMemo(
@@ -1277,6 +1278,93 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
       "wooper-paldea",
       "qwilfish-hisui",
       "sneasel-hisui",
+      // Z-A Mega Evolutions (added for searchability)
+      "charizard-mega-z",
+      "garchomp-mega-z",
+      "lucario-mega-z",
+      "dragonite-mega-z",
+      "ampharos-mega-z",
+      "steelix-mega-z",
+      "scizor-mega-z",
+      "heracross-mega-z",
+      "houndoom-mega-z",
+      "tyranitar-mega-z",
+      "slowbro-mega-z",
+      "pidgeot-mega-z",
+      "sableye-mega-z",
+      "mawile-mega-z",
+      "aggron-mega-z",
+      "medicham-mega-z",
+      "manectric-mega-z",
+      "banette-mega-z",
+      "absol-mega-z",
+      "latios-mega-z",
+      "latias-mega-z",
+      "kyogre-mega-z",
+      "groudon-mega-z",
+      "rayquaza-mega-z",
+      "jirachi-mega",
+      "deoxys-mega",
+      "chimecho-mega-z",
+      "skarmory-mega-z",
+      "altaria-mega-z",
+      "salamence-mega-z",
+      "metagross-mega-z",
+      "staraptor-mega-z",
+      "lopunny-mega-z",
+      "glalie-mega-z",
+      "sceptile-mega",
+      "blaziken-mega",
+      "swampert-mega",
+      "gardevoir-mega",
+      "sableye-mega",
+      "mawile-mega",
+      "aggron-mega",
+      "medicham-mega",
+      "manectric-mega",
+      "sharpedo-mega-z",
+      "camerupt-mega-z",
+      "altaria-mega",
+      "banette-mega",
+      "absol-mega",
+      "latios-mega",
+      "latias-mega",
+      "kyogre-primal",
+      "groudon-primal",
+      "raichu-mega-x",
+      "raichu-mega-y",
+      "clefable-mega-z",
+      "victreebel-mega-z",
+      "starmie-mega-z",
+      "emboar-mega-z",
+      "excadrill-mega-z",
+      "scolipede-mega-z",
+      "scrafty-mega-z",
+      "eelektross-mega-z",
+      "chandelure-mega-z",
+      "golurk-mega-z",
+      "chesnaught-mega-z",
+      "delphox-mega-z",
+      "greninja-mega-z",
+      "pyroar-mega-z",
+      "floette-mega-z",
+      "meowstic-mega-z",
+      "malamar-mega-z",
+      "barbaracle-mega-z",
+      "dragalge-mega-z",
+      "hawlucha-mega-z",
+      "zygarde-mega-z",
+      "crabominable-mega-z",
+      "golisopod-mega-z",
+      "drampa-mega-z",
+      "magearna-mega-z",
+      "zeraora-mega-z",
+      "falinks-mega-z",
+      "scovillain-mega-z",
+      "glimmora-mega-z",
+      "tatsugiri-mega-z",
+      "baxcalibur-mega-z",
+      "ogerpon-mega-z",
     ],
     [],
   )
@@ -1288,44 +1376,112 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
   const loadPopularPokemon = async () => {
     setLoading(true)
     try {
-      // Load a good selection of popular Pokemon initially
-      const popularSelection = pokemonDatabase.slice(0, 100) // First 100 Pokemon for initial load
+      // Load a smaller initial selection for faster load (first 50 - Gen 1)
+      const popularSelection = pokemonDatabase.slice(0, 50)
+      const pokemonPromises: Promise<any>[] = []
 
-      const pokemonPromises = popularSelection.map(async (name) => {
-        try {
-          const pokemon = await fetchPokemon(name)
-          return pokemon
-        } catch (error) {
-          console.error(`Error loading ${name}:`, error)
-          return null
+      // Load in smaller batches to avoid overwhelming the API
+      const BATCH_SIZE = 10
+      const results: any[] = []
+
+      for (let i = 0; i < popularSelection.length; i += BATCH_SIZE) {
+        const batch = popularSelection.slice(i, i + BATCH_SIZE)
+        const batchPromises = batch.map(async (name) => {
+          try {
+            return await fetchPokemon(name)
+          } catch (error) {
+            return null
+          }
+        })
+
+        const batchResults = await Promise.all(batchPromises)
+        results.push(...batchResults.filter(Boolean))
+        
+        // Small delay between batches to avoid rate limiting
+        if (i + BATCH_SIZE < popularSelection.length) {
+          await new Promise(resolve => setTimeout(resolve, 50))
         }
-      })
+      }
 
-      const results = await Promise.all(pokemonPromises)
-      setAllPokemon(results.filter(Boolean))
+      setAllPokemon(results)
+      
+      // Load more Pokemon in background after UI is responsive
+      setTimeout(() => {
+        loadAdditionalPokemon(popularSelection.slice(50))
+      }, 100)
     } catch (error) {
-      console.error("Error loading popular Pokemon:", error)
+      // Silently fail
     } finally {
       setLoading(false)
     }
   }
 
+  const loadAdditionalPokemon = async (pokemonNames: string[]) => {
+    const results: any[] = []
+    const BATCH_SIZE = 15
+
+    for (let i = 0; i < pokemonNames.length; i += BATCH_SIZE) {
+      const batch = pokemonNames.slice(i, i + BATCH_SIZE)
+      const batchPromises = batch.map(async (name) => {
+        try {
+          return await fetchPokemon(name)
+        } catch (error) {
+          return null
+        }
+      })
+
+      const batchResults = await Promise.all(batchPromises)
+      const validResults = batchResults.filter(Boolean)
+      results.push(...validResults)
+
+      if (validResults.length > 0) {
+        setAllPokemon((prev) => [...prev, ...validResults])
+      }
+
+      if (i + BATCH_SIZE < pokemonNames.length) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+    }
+  }
+
   const fetchPokemon = async (query: string) => {
     try {
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${query.toLowerCase()}`)
+      // Use AbortSignal.timeout for automatic request timeout (5 seconds)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${query.toLowerCase()}`, {
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       const pokemonData = await response.json()
 
-      const speciesResponse = await fetch(pokemonData.species.url)
-      if (!speciesResponse.ok) throw new Error(`HTTP error! status: ${speciesResponse.status}`)
-      const speciesData = await speciesResponse.json()
+      let speciesData = null
+      if (pokemonData.species?.url) {
+        try {
+          const speciesController = new AbortController()
+          const speciesTimeoutId = setTimeout(() => speciesController.abort(), 3000)
+
+          const speciesResponse = await fetch(pokemonData.species.url, {
+            signal: speciesController.signal,
+          })
+          clearTimeout(speciesTimeoutId)
+
+          if (speciesResponse.ok) {
+            speciesData = await speciesResponse.json()
+          }
+        } catch (error) {
+          // If species fetch fails, continue without it
+        }
+      }
 
       return {
         ...pokemonData,
-        species: speciesData,
+        species: speciesData || { id: pokemonData.id, name: pokemonData.name },
       }
     } catch (error) {
-      // This prevents cluttering console when searching for Pokemon that don't exist in API
       return null
     }
   }

@@ -23,6 +23,7 @@ export function TeamBuilder() {
   const [team, setTeam] = useState<(TeamPokemon | null)[]>(Array(6).fill(null))
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [showPokemonSearch, setShowPokemonSearch] = useState(false)
+  const [currentGeneration, setCurrentGeneration] = useState("all")
 
   const addPokemonToTeam = (pokemon: any, slotIndex: number) => {
     const newTeamMember: TeamPokemon = {
@@ -202,6 +203,7 @@ export function TeamBuilder() {
             setShowPokemonSearch(false)
             setSelectedSlot(null)
           }}
+          initialGeneration={currentGeneration}
         />
       )}
     </div>

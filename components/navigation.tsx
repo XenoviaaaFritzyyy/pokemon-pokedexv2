@@ -54,8 +54,8 @@ export function Navigation({
         ))}
       </div>
 
-      {/* Generation Filter - Only show for National Dex */}
-      {currentCategory === "national" && (
+      {/* Generation Filter - Show for National Dex and Team Builder */}
+      {(currentCategory === "national" || currentCategory === "team-builder") && (
         <div className="flex items-center space-x-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Generation:</span>
           <Select value={currentGeneration} onValueChange={onGenerationChange}>
