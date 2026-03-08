@@ -12,10 +12,9 @@ import Image from "next/image"
 interface PokemonSearchProps {
   onSelectPokemon: (pokemon: any) => void
   onClose: () => void
-  generationFilter?: { start: number; end: number } | null
 }
 
-export function PokemonSearch({ onSelectPokemon, onClose, generationFilter }: PokemonSearchProps) {
+export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [allPokemon, setAllPokemon] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -1238,51 +1237,8 @@ export function PokemonSearch({ onSelectPokemon, onClose, generationFilter }: Po
   )
 
   useEffect(() => {
-    const loadPokemon = async () => {
-      try {
-        // Filter pokemon based on generation if specified
-        let pokemonToFetch = pokemonDatabase
-        if (generationFilter) {
-          pokemonToFetch = pokemonDatabase.filter((name) => {
-            // Extract ID from pokemon name (hack for non-numeric names)
-            const response = fetch(`https://pokeapi.co/api/v2/pokemon/${name}`)
-              .then((res) => res.json())
-              .then((data) => {
-                const id = data.id
-                return id >= generationFilter.start && id <= generationFilter.end
-              })
-              .catch(() => false)
-            return response
-          })
-        }
-
-        // Batch fetch with optimized promises
-        const BATCH_SIZE = 10
-        const pokemonList: any[] = []
-
-        for (let i = 0; i < pokemonToFetch.length; i += BATCH_SIZE) {
-          const batch = pokemonToFetch.slice(i, i + BATCH_SIZE)
-          const results = await Promise.all(
-            batch.map((name) =>
-              fetch(`https://pokeapi.co/api/v2/pokemon/${name}`)
-                .then((res) => res.json())
-                .then((data) => ({ ...data, name }))
-                .catch(() => null),
-            ),
-          )
-          pokemonList.push(...results.filter(Boolean))
-        }
-
-        setAllPokemon(pokemonList)
-      } catch (error) {
-        console.error("Error loading Pokemon:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadPokemon()
-  }, [generationFilter])
+    loadPopularPokemon()
+  }, [])
 
   const loadPopularPokemon = async () => {
     setLoading(true)
