@@ -19,11 +19,7 @@ export interface TeamPokemon {
   nickname?: string
 }
 
-interface TeamBuilderProps {
-  currentGeneration?: string
-}
-
-export function TeamBuilder({ currentGeneration = "all" }: TeamBuilderProps) {
+export function TeamBuilder() {
   const [team, setTeam] = useState<(TeamPokemon | null)[]>(Array(6).fill(null))
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [showPokemonSearch, setShowPokemonSearch] = useState(false)
@@ -206,7 +202,6 @@ export function TeamBuilder({ currentGeneration = "all" }: TeamBuilderProps) {
             setShowPokemonSearch(false)
             setSelectedSlot(null)
           }}
-          initialGeneration={currentGeneration}
         />
       )}
     </div>
