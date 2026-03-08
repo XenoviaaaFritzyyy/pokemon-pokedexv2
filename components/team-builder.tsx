@@ -8,7 +8,14 @@ import { Button } from "@/components/ui/button"
 import { TeamSlot } from "@/components/team-slot"
 import { TypeCoverage } from "@/components/type-coverage"
 import { PokemonSearch } from "@/components/pokemon-search"
-import { Download, Upload, Trash2, Users } from "lucide-react"
+import { Download, Upload, Trash2, Users, Filter } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export interface TeamPokemon {
   id: string
@@ -23,6 +30,20 @@ export function TeamBuilder() {
   const [team, setTeam] = useState<(TeamPokemon | null)[]>(Array(6).fill(null))
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [showPokemonSearch, setShowPokemonSearch] = useState(false)
+  const [selectedGeneration, setSelectedGeneration] = useState("all")
+
+  // Generation ranges
+  const generationRanges = {
+    gen1: { start: 1, end: 151 },
+    gen2: { start: 152, end: 251 },
+    gen3: { start: 252, end: 386 },
+    gen4: { start: 387, end: 493 },
+    gen5: { start: 494, end: 649 },
+    gen6: { start: 650, end: 721 },
+    gen7: { start: 722, end: 809 },
+    gen8: { start: 810, end: 905 },
+    gen9: { start: 906, end: 1025 },
+  }
 
   const addPokemonToTeam = (pokemon: any, slotIndex: number) => {
     const newTeamMember: TeamPokemon = {
@@ -116,6 +137,30 @@ export function TeamBuilder() {
           </div>
         </div>
 
+        {/* Generation Filter */}
+        <div className="flex justify-center gap-2">
+          <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+            <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <Select value={selectedGeneration} onValueChange={setSelectedGeneration}>
+              <SelectTrigger className="w-32 border-0 bg-transparent p-0">
+                <SelectValue placeholder="Filter by Generation" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Generations</SelectItem>
+                <SelectItem value="gen1">Gen 1 (Kanto)</SelectItem>
+                <SelectItem value="gen2">Gen 2 (Johto)</SelectItem>
+                <SelectItem value="gen3">Gen 3 (Hoenn)</SelectItem>
+                <SelectItem value="gen4">Gen 4 (Sinnoh)</SelectItem>
+                <SelectItem value="gen5">Gen 5 (Unova)</SelectItem>
+                <SelectItem value="gen6">Gen 6 (Kalos)</SelectItem>
+                <SelectItem value="gen7">Gen 7 (Alola)</SelectItem>
+                <SelectItem value="gen8">Gen 8 (Galar)</SelectItem>
+                <SelectItem value="gen9">Gen 9 (Paldea)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="flex flex-wrap justify-center gap-3">
           <Button
             variant="outline"
@@ -202,6 +247,7 @@ export function TeamBuilder() {
             setShowPokemonSearch(false)
             setSelectedSlot(null)
           }}
+          generationFilter={selectedGeneration !== "all" ? generationRanges[selectedGeneration as keyof typeof generationRanges] : null}
         />
       )}
     </div>

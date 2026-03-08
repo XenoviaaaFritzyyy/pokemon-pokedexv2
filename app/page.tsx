@@ -65,37 +65,50 @@ export default function Home() {
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
   const fetchPokemonBatch = async (startId: number, endId: number): Promise<any[]> => {
-    const batchPromises = []
+    const results: any[] = []
+    const SUB_BATCH_SIZE = 5 // Smaller sub-batches to avoid overwhelming the API
 
-    for (let i = startId; i <= endId; i++) {
-      batchPromises.push(
-        fetch(`https://pokeapi.co/api/v2/pokemon/${i}`)
-          .then(async (response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`)
-            }
-            const pokemonData = await response.json()
+    for (let i = startId; i <= endId; i += SUB_BATCH_SIZE) {
+      const subBatchEnd = Math.min(i + SUB_BATCH_SIZE - 1, endId)
+      const subBatchPromises = []
 
-            const speciesResponse = await fetch(pokemonData.species.url)
-            if (!speciesResponse.ok) {
-              throw new Error(`HTTP error! status: ${speciesResponse.status}`)
-            }
-            const speciesData = await speciesResponse.json()
+      for (let j = i; j <= subBatchEnd; j++) {
+        subBatchPromises.push(
+          fetch(`https://pokeapi.co/api/v2/pokemon/${j}`)
+            .then(async (response) => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+              }
+              const pokemonData = await response.json()
 
-            return {
-              ...pokemonData,
-              species: speciesData,
-            }
-          })
-          .catch((error) => {
-            console.error(`Error fetching Pokémon ${i}:`, error)
-            return null
-          }),
-      )
+              const speciesResponse = await fetch(pokemonData.species.url)
+              if (!speciesResponse.ok) {
+                throw new Error(`HTTP error! status: ${speciesResponse.status}`)
+              }
+              const speciesData = await speciesResponse.json()
+
+              return {
+                ...pokemonData,
+                species: speciesData,
+              }
+            })
+            .catch((error) => {
+              // Silently fail to avoid console spam
+              return null
+            }),
+        )
+      }
+
+      const subResults = await Promise.all(subBatchPromises)
+      results.push(...subResults.filter(Boolean))
+      
+      // Small delay between sub-batches to prevent rate limiting
+      if (i + SUB_BATCH_SIZE <= endId) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
     }
 
-    const results = await Promise.all(batchPromises)
-    return results.filter(Boolean)
+    return results
   }
 
   const fetchAllPokemon = async () => {
@@ -313,27 +326,47 @@ export default function Home() {
       "audino-mega",
       "sharpedo-mega",
       "diancie-mega",
+      // Legends Z-A Mega Evolutions (to be checked if available in PokeAPI)
+      "dragonite-mega",
+      "zeraora-mega",
+      "volcarona-mega",
+      "hydreigon-mega",
+      "archeops-mega",
     ]
 
     setLoadingProgress(25)
 
-    for (const variant of megaVariants) {
-      try {
-        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${variant}`)
-        if (response.ok) {
-          const pokemonData = await response.json()
-          const speciesResponse = await fetch(pokemonData.species.url)
-          if (speciesResponse.ok) {
-            const speciesData = await speciesResponse.json()
-            megaEvolutions.push({
-              ...pokemonData,
-              species: speciesData,
-            })
+    // Batch fetch with optimized promises for better performance
+    const BATCH_SIZE = 10
+    for (let i = 0; i < megaVariants.length; i += BATCH_SIZE) {
+      const batch = megaVariants.slice(i, i + BATCH_SIZE)
+      
+      const batchPromises = batch.map(async (variant) => {
+        try {
+          const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${variant}`)
+          if (response.ok) {
+            const pokemonData = await response.json()
+            const speciesResponse = await fetch(pokemonData.species.url)
+            if (speciesResponse.ok) {
+              const speciesData = await speciesResponse.json()
+              return {
+                ...pokemonData,
+                species: speciesData,
+              }
+            }
           }
+        } catch (error) {
+          // Silently skip unavailable Legends Z-A megas
         }
-      } catch (error) {
-        // console.error removed to avoid cluttering console
-      }
+        return null
+      })
+
+      const results = await Promise.all(batchPromises)
+      megaEvolutions.push(...results.filter(Boolean))
+      
+      // Update progress
+      const progress = 25 + ((i + BATCH_SIZE) / megaVariants.length) * 75
+      setLoadingProgress(Math.min(progress, 99))
     }
 
     setLoadingProgress(100)
