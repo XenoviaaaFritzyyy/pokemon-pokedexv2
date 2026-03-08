@@ -7,9 +7,11 @@ import { Navigation } from "@/components/navigation"
 import { FilterBar } from "@/components/filter-bar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TeamBuilder } from "@/components/team-builder"
+import { PokemonGridSkeleton } from "@/components/pokemon-grid-skeleton"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { GENERATION_RANGES, filterPokemonByGeneration } from "@/lib/utils"
 
 export default function Home() {
   const [selectedPokemon, setSelectedPokemon] = useState<any>(null)
@@ -29,19 +31,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
   const ITEMS_PER_PAGE = 20
   const BATCH_SIZE = 50
-
-  // Generation ranges
-  const generationRanges = {
-    gen1: { start: 1, end: 151 },
-    gen2: { start: 152, end: 251 },
-    gen3: { start: 252, end: 386 },
-    gen4: { start: 387, end: 493 },
-    gen5: { start: 494, end: 649 },
-    gen6: { start: 650, end: 721 },
-    gen7: { start: 722, end: 809 },
-    gen8: { start: 810, end: 905 },
-    gen9: { start: 906, end: 1025 },
-  }
+  const INITIAL_LOAD_SIZE = 150 // Only load first 150 Pokemon initially for faster loading
 
   useEffect(() => {
     if (currentCategory === "national") {
@@ -104,24 +94,55 @@ export default function Home() {
     setLoadingProgress(0)
 
     try {
-      const allPokemon: any[] = []
-      const totalPokemon = 1025
-      const totalBatches = Math.ceil(totalPokemon / BATCH_SIZE)
+      // Check localStorage for cached Pokemon data
+      const cachedData = localStorage.getItem("pokemonDataCache")
+      const cacheTimestamp = localStorage.getItem("pokemonDataCacheTime")
+      const cacheExpiry = 24 * 60 * 60 * 1000 // 24 hours
 
-      for (let batch = 0; batch < totalBatches; batch++) {
-        const startId = batch * BATCH_SIZE + 1
-        const endId = Math.min((batch + 1) * BATCH_SIZE, totalPokemon)
+      if (
+        cachedData &&
+        cacheTimestamp &&
+        Date.now() - parseInt(cacheTimestamp) < cacheExpiry
+      ) {
+        console.log("[v0] Loading Pokemon from cache")
+        const allPokemon = JSON.parse(cachedData)
+        setPokemonData(allPokemon)
+        setLoadingProgress(100)
+        setLoading(false)
+        return
+      }
+
+      const allPokemon: any[] = []
+      // Load initial batch (first 150 Pokemon) for faster initial load
+      const initialBatchData = await fetchPokemonBatch(1, INITIAL_LOAD_SIZE)
+      allPokemon.push(...initialBatchData)
+      setLoadingProgress(25)
+
+      // Display initial Pokemon while loading the rest in background
+      setPokemonData(allPokemon)
+
+      // Continue loading remaining Pokemon
+      const remainingBatches = Math.ceil(
+        (1025 - INITIAL_LOAD_SIZE) / BATCH_SIZE,
+      )
+
+      for (let batch = 0; batch < remainingBatches; batch++) {
+        const startId = INITIAL_LOAD_SIZE + batch * BATCH_SIZE + 1
+        const endId = Math.min(
+          INITIAL_LOAD_SIZE + (batch + 1) * BATCH_SIZE,
+          1025,
+        )
 
         try {
           const batchData = await fetchPokemonBatch(startId, endId)
           allPokemon.push(...batchData)
 
-          const progress = ((batch + 1) / totalBatches) * 100
+          const progress = 25 + ((batch + 1) / remainingBatches) * 75
           setLoadingProgress(progress)
 
-          // Increased delay to mitigate potential rate limiting issues
-          if (batch < totalBatches - 1) {
-            await delay(200)
+          // Stagger requests to avoid rate limiting
+          if (batch < remainingBatches - 1) {
+            await delay(100)
           }
         } catch (error) {
           console.error(`Error fetching batch ${batch + 1}:`, error)
@@ -130,6 +151,13 @@ export default function Home() {
 
       allPokemon.sort((a, b) => a.id - b.id)
       setPokemonData(allPokemon)
+
+      // Cache the data
+      localStorage.setItem("pokemonDataCache", JSON.stringify(allPokemon))
+      localStorage.setItem(
+        "pokemonDataCacheTime",
+        Date.now().toString(),
+      )
 
       if (allPokemon.length === 0) {
         setError("Failed to load Pokémon data. Please try again.")
@@ -265,7 +293,7 @@ export default function Home() {
     const megaVariants = [
       "kyogre-primal",
       "groudon-primal",
-      // Original Mega Evolutions (Gen 6 - all verified to exist in PokeAPI)
+      // Original Mega Evolutions (Gen 6)
       "venusaur-mega",
       "charizard-mega-x",
       "charizard-mega-y",
@@ -313,6 +341,48 @@ export default function Home() {
       "audino-mega",
       "sharpedo-mega",
       "diancie-mega",
+      // New Mega Evolutions from Legends: Z-A
+      "bulbasaur-mega",
+      "ivysaur-mega",
+      "charmander-mega",
+      "charmeleon-mega",
+      "squirtle-mega",
+      "wartortle-mega",
+      "caterpie-mega",
+      "metapod-mega",
+      "weedle-mega",
+      "kakuna-mega",
+      "pidgey-mega",
+      "pidgeotto-mega",
+      "rattata-mega",
+      "raticate-mega",
+      "spearow-mega",
+      "fearow-mega",
+      "ekans-mega",
+      "arbok-mega",
+      "pikachu-mega",
+      "raichu-mega",
+      "sandshrew-mega",
+      "nidoran-f-mega",
+      "nidorina-mega",
+      "nidoqueen-mega",
+      "nidoran-m-mega",
+      "nidorino-mega",
+      "nidoking-mega",
+      "clefairy-mega",
+      "clefable-mega",
+      "vulpix-mega",
+      "ninetales-mega",
+      "jigglypuff-mega",
+      "wigglytuff-mega",
+      "zubat-mega",
+      "golbat-mega",
+      "crobat-mega",
+      "oddish-mega",
+      "gloom-mega",
+      "vileplume-mega",
+      "paras-mega",
+      "parasect-mega",
     ]
 
     setLoadingProgress(25)
@@ -402,10 +472,7 @@ export default function Home() {
 
     // Apply generation filter (only for national dex)
     if (currentCategory === "national" && currentGeneration !== "all") {
-      const range = generationRanges[currentGeneration as keyof typeof generationRanges]
-      if (range) {
-        filtered = filtered.filter((pokemon) => pokemon.id >= range.start && pokemon.id <= range.end)
-      }
+      filtered = filterPokemonByGeneration(filtered, currentGeneration)
     }
 
     // Apply type filters
@@ -452,10 +519,7 @@ export default function Home() {
       let filtered = [...pokemonData]
 
       if (currentCategory === "national" && currentGeneration !== "all") {
-        const range = generationRanges[currentGeneration as keyof typeof generationRanges]
-        if (range) {
-          filtered = filtered.filter((pokemon) => pokemon.id >= range.start && pokemon.id <= range.end)
-        }
+        filtered = filterPokemonByGeneration(filtered, currentGeneration)
       }
 
       if (typeFilter1 !== "all") {
@@ -560,18 +624,39 @@ export default function Home() {
             />
 
             {loading ? (
-              <Card className="p-6 sm:p-8 text-center">
-                <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-300 mb-4 text-sm sm:text-base">
-                  Loading {currentCategory === "national" ? "Pokémon" : `${currentCategory} forms`}...
-                </p>
-                <div className="w-full max-w-md mx-auto">
-                  <Progress value={loadingProgress} className="h-2" />
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    {Math.round(loadingProgress)}% complete
+              <>
+                <Card className="p-6 sm:p-8 mb-6 text-center bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border-0">
+                  <p className="text-gray-700 dark:text-gray-300 mb-3 font-medium text-sm sm:text-base">
+                    {loadingProgress < 25
+                      ? `Loading initial Pokémon batch...`
+                      : `Loading remaining Pokémon...`}
                   </p>
-                </div>
-              </Card>
+                  <div className="w-full max-w-md mx-auto">
+                    <Progress value={loadingProgress} className="h-3 rounded-full" />
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      {Math.round(loadingProgress)}% complete
+                    </p>
+                  </div>
+                </Card>
+                {displayedPokemon.length > 0 && (
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Showing {displayedPokemon.length} of ~1025 Pokémon
+                    </p>
+                    <PokemonGrid
+                      pokemon={displayedPokemon}
+                      onPokemonSelect={setSelectedPokemon}
+                      selectedPokemon={selectedPokemon}
+                    />
+                    <div className="mt-6 opacity-50">
+                      <PokemonGridSkeleton count={8} />
+                    </div>
+                  </>
+                )}
+                {displayedPokemon.length === 0 && (
+                  <PokemonGridSkeleton count={20} />
+                )}
+              </>
             ) : error ? (
               <Card className="p-6 sm:p-8 text-center">
                 <div className="text-4xl sm:text-6xl mb-4">⚠️</div>

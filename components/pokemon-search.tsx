@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Search, Loader2 } from "lucide-react"
 import Image from "next/image"
+import { GENERATION_RANGES, filterPokemonByGeneration } from "@/lib/utils"
 
 interface PokemonSearchProps {
   onSelectPokemon: (pokemon: any) => void
@@ -19,6 +21,7 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
   const [allPokemon, setAllPokemon] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [selectedGeneration, setSelectedGeneration] = useState("all")
 
   // Comprehensive list of Pokemon names for better search coverage
   const pokemonDatabase = useMemo(
@@ -190,6 +193,48 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
       "aerodactyl-mega",
       "mewtwo-mega-x",
       "mewtwo-mega-y",
+      // New Mega Evolutions from Legends: Z-A
+      "bulbasaur-mega",
+      "ivysaur-mega",
+      "charmander-mega",
+      "charmeleon-mega",
+      "squirtle-mega",
+      "wartortle-mega",
+      "caterpie-mega",
+      "metapod-mega",
+      "weedle-mega",
+      "kakuna-mega",
+      "pidgey-mega",
+      "pidgeotto-mega",
+      "rattata-mega",
+      "raticate-mega",
+      "spearow-mega",
+      "fearow-mega",
+      "ekans-mega",
+      "arbok-mega",
+      "pikachu-mega",
+      "raichu-mega",
+      "sandshrew-mega",
+      "nidoran-f-mega",
+      "nidorina-mega",
+      "nidoqueen-mega",
+      "nidoran-m-mega",
+      "nidorino-mega",
+      "nidoking-mega",
+      "clefairy-mega",
+      "clefable-mega",
+      "vulpix-mega",
+      "ninetales-mega",
+      "jigglypuff-mega",
+      "wigglytuff-mega",
+      "zubat-mega",
+      "golbat-mega",
+      "crobat-mega",
+      "oddish-mega",
+      "gloom-mega",
+      "vileplume-mega",
+      "paras-mega",
+      "parasect-mega",
       "rattata-alola",
       "raticate-alola",
       "raichu-alola",
@@ -1349,13 +1394,23 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
     }
   }, [searchTerm, allPokemon, pokemonDatabase])
 
-  // Display Pokemon based on search
+  // Display Pokemon based on search and generation filter
   const displayPokemon = useMemo(() => {
+    let pokemon = []
+
     if (!searchTerm || searchTerm.length < 2) {
-      return allPokemon.slice(0, 20) // Show first 20 popular Pokemon
+      pokemon = allPokemon.slice(0, 20) // Show first 20 popular Pokemon
+    } else {
+      pokemon = searchResults
     }
-    return searchResults
-  }, [searchTerm, allPokemon, searchResults])
+
+    // Apply generation filter
+    if (selectedGeneration !== "all") {
+      pokemon = filterPokemonByGeneration(pokemon, selectedGeneration)
+    }
+
+    return pokemon
+  }, [searchTerm, allPokemon, searchResults, selectedGeneration])
 
   const getTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
@@ -1416,6 +1471,28 @@ export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) 
               className="pl-12 h-12 text-lg rounded-xl border-2 border-purple-200 focus:border-purple-400 bg-white dark:bg-gray-800"
               autoFocus
             />
+          </div>
+
+          {/* Generation Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Generation:</span>
+            <Select value={selectedGeneration} onValueChange={setSelectedGeneration}>
+              <SelectTrigger className="w-48 h-10 rounded-lg border-2 border-purple-200">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Generations</SelectItem>
+                <SelectItem value="gen1">Generation I</SelectItem>
+                <SelectItem value="gen2">Generation II</SelectItem>
+                <SelectItem value="gen3">Generation III</SelectItem>
+                <SelectItem value="gen4">Generation IV</SelectItem>
+                <SelectItem value="gen5">Generation V</SelectItem>
+                <SelectItem value="gen6">Generation VI</SelectItem>
+                <SelectItem value="gen7">Generation VII</SelectItem>
+                <SelectItem value="gen8">Generation VIII</SelectItem>
+                <SelectItem value="gen9">Generation IX</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <ScrollArea className="h-[50vh]">
