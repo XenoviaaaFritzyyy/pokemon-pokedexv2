@@ -1369,6 +1369,47 @@ export function PokemonSearch({ onSelectPokemon, onClose, initialGeneration = "a
     [],
   )
 
+  const fetchPokemon = async (query: string) => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${query.toLowerCase()}`, {
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const pokemonData = await response.json()
+
+      let speciesData = null
+      if (pokemonData.species?.url) {
+        try {
+          const speciesController = new AbortController()
+          const speciesTimeoutId = setTimeout(() => speciesController.abort(), 3000)
+
+          const speciesResponse = await fetch(pokemonData.species.url, {
+            signal: speciesController.signal,
+          })
+          clearTimeout(speciesTimeoutId)
+
+          if (speciesResponse.ok) {
+            speciesData = await speciesResponse.json()
+          }
+        } catch (error) {
+          // If species fetch fails, continue without it
+        }
+      }
+
+      return {
+        ...pokemonData,
+        species: speciesData || { id: pokemonData.id, name: pokemonData.name },
+      }
+    } catch (error) {
+      return null
+    }
+  }
+
   useEffect(() => {
     loadPopularPokemon()
   }, [])
@@ -1441,48 +1482,6 @@ export function PokemonSearch({ onSelectPokemon, onClose, initialGeneration = "a
       if (i + BATCH_SIZE < pokemonNames.length) {
         await new Promise(resolve => setTimeout(resolve, 50))
       }
-    }
-  }
-
-  const fetchPokemon = async (query: string) => {
-    try {
-      // Use AbortSignal.timeout for automatic request timeout (5 seconds)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${query.toLowerCase()}`, {
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
-      const pokemonData = await response.json()
-
-      let speciesData = null
-      if (pokemonData.species?.url) {
-        try {
-          const speciesController = new AbortController()
-          const speciesTimeoutId = setTimeout(() => speciesController.abort(), 3000)
-
-          const speciesResponse = await fetch(pokemonData.species.url, {
-            signal: speciesController.signal,
-          })
-          clearTimeout(speciesTimeoutId)
-
-          if (speciesResponse.ok) {
-            speciesData = await speciesResponse.json()
-          }
-        } catch (error) {
-          // If species fetch fails, continue without it
-        }
-      }
-
-      return {
-        ...pokemonData,
-        species: speciesData || { id: pokemonData.id, name: pokemonData.name },
-      }
-    } catch (error) {
-      return null
     }
   }
 

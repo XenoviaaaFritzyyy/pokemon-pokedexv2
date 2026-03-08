@@ -57,13 +57,16 @@ export default function Home() {
 
   const fetchPokemonBatch = async (startId: number, endId: number): Promise<any[]> => {
     const batchPromises = []
-    
-    // Optimize by using a smaller concurrent request limit to avoid overwhelming the API
-    const maxConcurrent = 15
+
+    const createTimeoutSignal = (timeoutMs: number) => {
+      const controller = new AbortController()
+      setTimeout(() => controller.abort(), timeoutMs)
+      return controller.signal
+    }
 
     for (let i = startId; i <= endId; i++) {
       batchPromises.push(
-        fetch(`https://pokeapi.co/api/v2/pokemon/${i}`, { signal: AbortSignal.timeout(5000) })
+        fetch(`https://pokeapi.co/api/v2/pokemon/${i}`, { signal: createTimeoutSignal(5000) })
           .then(async (response) => {
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`)
@@ -74,7 +77,7 @@ export default function Home() {
             let speciesData = null
             if (pokemonData.species?.url) {
               try {
-                const speciesResponse = await fetch(pokemonData.species.url, { signal: AbortSignal.timeout(5000) })
+                const speciesResponse = await fetch(pokemonData.species.url, { signal: createTimeoutSignal(5000) })
                 if (speciesResponse.ok) {
                   speciesData = await speciesResponse.json()
                 }
@@ -95,7 +98,6 @@ export default function Home() {
       )
     }
 
-    // Use Promise.allSettled for more robust handling of mixed successes/failures
     const results = await Promise.all(batchPromises)
     return results.filter(Boolean)
   }
@@ -1521,7 +1523,7 @@ export default function Home() {
         />
 
         {currentCategory === "team-builder" ? (
-          <TeamBuilder />
+          <TeamBuilder currentGeneration={currentGeneration} />
         ) : (
           <>
             <FilterBar

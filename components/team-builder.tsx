@@ -19,11 +19,14 @@ export interface TeamPokemon {
   nickname?: string
 }
 
-export function TeamBuilder() {
+interface TeamBuilderProps {
+  currentGeneration?: string
+}
+
+export function TeamBuilder({ currentGeneration = "all" }: TeamBuilderProps) {
   const [team, setTeam] = useState<(TeamPokemon | null)[]>(Array(6).fill(null))
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [showPokemonSearch, setShowPokemonSearch] = useState(false)
-  const [currentGeneration, setCurrentGeneration] = useState("all")
 
   const addPokemonToTeam = (pokemon: any, slotIndex: number) => {
     const newTeamMember: TeamPokemon = {
