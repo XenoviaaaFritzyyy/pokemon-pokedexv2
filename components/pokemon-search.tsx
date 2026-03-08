@@ -12,9 +12,10 @@ import Image from "next/image"
 interface PokemonSearchProps {
   onSelectPokemon: (pokemon: any) => void
   onClose: () => void
+  generationFilter?: { start: number; end: number } | null
 }
 
-export function PokemonSearch({ onSelectPokemon, onClose }: PokemonSearchProps) {
+export function PokemonSearch({ onSelectPokemon, onClose, generationFilter }: PokemonSearchProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [allPokemon, setAllPokemon] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

@@ -12,6 +12,11 @@ import { Plus, X, Trash2, Search } from "lucide-react"
 import { ImagePlaceholder } from "@/components/image-placeholder"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 
 interface TeamSlotProps {
   slotIndex: number
@@ -59,6 +64,8 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
   const [itemSearchOpen, setItemSearchOpen] = useState(false)
   const [moveSearchQuery, setMoveSearchQuery] = useState("")
   const [itemSearchQuery, setItemSearchQuery] = useState("")
+  const [abilityDetails, setAbilityDetails] = useState<{ [key: string]: any }>({})
+  const [loadingAbility, setLoadingAbility] = useState<string | null>(null)
 
   useEffect(() => {
     if (teamMember?.pokemon) {
@@ -326,6 +333,39 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
       .replace("-", " ")
   }
 
+  const fetchAbilityDetails = async (abilityUrl: string, abilityName: string) => {
+    if (abilityDetails[abilityName]) return
+
+    setLoadingAbility(abilityName)
+    try {
+      const response = await fetch(abilityUrl)
+      if (!response.ok) throw new Error("Failed to fetch ability")
+      const data = await response.json()
+
+      const effectEntry = data.effect_entries?.find((e: any) => e.language.name === "en")
+      const shortEffect = data.effect_entries?.find((e: any) => e.language.name === "en")
+
+      setAbilityDetails((prev) => ({
+        ...prev,
+        [abilityName]: {
+          effect: effectEntry?.effect || "No description available",
+          shortEffect: shortEffect?.short_effect || "",
+        },
+      }))
+    } catch (error) {
+      console.error("Error fetching ability details:", error)
+      setAbilityDetails((prev) => ({
+        ...prev,
+        [abilityName]: {
+          effect: "Failed to load ability details",
+          shortEffect: "",
+        },
+      }))
+    } finally {
+      setLoadingAbility(null)
+    }
+  }
+
   const filteredMoves = availableMoves.filter((move) => !teamMember?.moves.some((m) => m.name === move.name))
 
   const categorizedMoves = {
@@ -435,6 +475,56 @@ export function TeamSlot({ slotIndex, teamMember, onAddPokemon, onUpdateMember, 
             onChange={(e) => onUpdateMember({ nickname: e.target.value })}
             className="h-10 rounded-lg"
           />
+        </div>
+
+        {/* Abilities Section */}
+        <div className="space-y-2">
+          <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">Abilities</h4>
+          <div className="flex flex-wrap gap-2">
+            {teamMember.pokemon.abilities?.map((abilityEntry: any) => {
+              const abilityName = abilityEntry.ability.name
+              const isHidden = abilityEntry.is_hidden
+              const abilityUrl = abilityEntry.ability.url
+              const details = abilityDetails[abilityName]
+
+              return (
+                <HoverCard key={abilityName} onOpenChange={() => fetchAbilityDetails(abilityUrl, abilityName)}>
+                  <HoverCardTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={`cursor-help transition-all ${
+                        isHidden
+                          ? "bg-amber-100 dark:bg-amber-900/30 border-amber-400 dark:border-amber-600"
+                          : "bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600"
+                      }`}
+                    >
+                      <span className="text-xs font-medium capitalize">{abilityName.replace("-", " ")}</span>
+                      {isHidden && <span className="ml-1 text-xs font-bold">HA</span>}
+                    </Badge>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-80 p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold capitalize">{abilityName.replace("-", " ")}</h4>
+                        {isHidden && (
+                          <Badge variant="secondary" className="text-xs">
+                            Hidden Ability
+                          </Badge>
+                        )}
+                      </div>
+                      {loadingAbility === abilityName ? (
+                        <p className="text-sm text-gray-500 italic">Loading...</p>
+                      ) : details ? (
+                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{details.effect}</p>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No details available</p>
+                      )}
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              )
+            })}
+          </div>
         </div>
 
         {/* Moves Section */}
